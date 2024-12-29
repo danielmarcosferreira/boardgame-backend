@@ -4,11 +4,13 @@ import dotenv from "dotenv"
 dotenv.config();
 
 import categoriesRouter from "./routes/categories.routes.js"
+import gamesRouter from "./routes/games.routes.js"
 
 const app = e();
 app.use(cors());
 app.use(e.json());
 app.use(categoriesRouter)
+app.use(gamesRouter)
 
 const port = process.env.PORT;
 app.listen(port, () => console.log(`Server is running in port ${port}`));
