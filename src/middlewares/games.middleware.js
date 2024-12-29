@@ -12,7 +12,7 @@ export function gamesMiddleware(req, res, next) {
         return res.status(422).send(errors)
     }
 
-    req.message = newGame
+    req.body = newGame
 
     next()
 }
