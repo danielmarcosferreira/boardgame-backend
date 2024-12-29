@@ -1,13 +1,15 @@
 import pg from 'pg';
+import env from "dotenv"
+env.config()
 
 const { Pool } = pg;
 
 const connection = new Pool({
-    user: 'danielmarcos',
-    password: 'root',
-    host: 'localhost',
-    port: 5432,
-    database: 'boardgame'
+    user: process.env.USER,
+    password: process.env.PASSWORD,
+    host: process.env.HOST,
+    port: process.env.PORT_SERVER,
+    database: process.env.DATABASE
 });
 
 export default connection;
