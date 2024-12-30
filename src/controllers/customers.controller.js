@@ -23,7 +23,7 @@ export async function postCustomers(req, res) {
 }
 
 export async function getCustomers(req, res) {
-    const { cpf } = req.query;
+    const { cpf, offset, limit } = req.query;
     const { id } = req.params;
 
     try {
@@ -49,7 +49,21 @@ export async function getCustomers(req, res) {
             return res.send(customersByCpf.rows);
         }
 
-        const customers = await connection.query(`SELECT * FROM customers;`);
+        if (offset && limit) {
+            const result = await connection.query(`
+            SELECT * FROM customers ORDER BY name LIMIT $1 OFFSET $2;`, [limit, offset]);
+            return res.send(result.rows);
+        } else if (offset) {
+            const result = await connection.query(`
+            SELECT * FROM customers ORDER BY name OFFSET $1;`, [offset]);
+            return res.send(result.rows);
+        } else if (limit) {
+            const result = await connection.query(`
+            SELECT * FROM customers ORDER BY name LIMIT $1;`, [limit]);
+            return res.send(result.rows);
+        }
+
+        const customers = await connection.query(`SELECT * FROM customers ORDER BY name;`);
         const formattedCustomers = customers.rows.map((customer) => ({
             ...customer,
             birthday: customer.birthday

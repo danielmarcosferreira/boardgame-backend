@@ -37,7 +37,7 @@ export async function postRental(req, res) {
 }
 
 export async function getRentals(req, res) {
-    const { gameId, customerId } = req.query;
+    const { gameId, customerId, offset, limit } = req.query;
 
     if (gameId) {
         const gameExists = await connection.query(`SELECT * FROM games WHERE id = $1;`, [gameId]);
@@ -53,6 +53,20 @@ export async function getRentals(req, res) {
             console.log(`Customer with ID ${customerId} does not exist`);
             return res.status(404).send({ message: `Customer with ID ${customerId} not found` });
         }
+    }
+
+    if (offset && limit) {
+        const result = await connection.query(`
+            SELECT * FROM rentals ORDER BY "rentDate" LIMIT $1 OFFSET $2;`, [limit, offset]);
+        return res.send(result.rows);
+    } else if (offset) {
+        const result = await connection.query(`
+            SELECT * FROM rentals ORDER BY "rentDate" OFFSET $1;`, [offset]);
+        return res.send(result.rows);
+    } else if (limit) {
+        const result = await connection.query(`
+            SELECT * FROM rentals ORDER BY "rentDate" LIMIT $1;`, [limit]);
+        return res.send(result.rows);
     }
 
     try {

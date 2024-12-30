@@ -13,9 +13,27 @@ export async function postCategories(req, res) {
 }
 
 export async function getCategories(req, res) {
+    const { offset, limit } = req.query;
+
     try {
-        const allCategories = await connection.query(`SELECT * FROM categories;`);
-        return res.send(allCategories.rows)
+        if (offset && limit) {
+            const result = await connection.query(`
+            SELECT * FROM categories ORDER BY name LIMIT $1 OFFSET $2;`, [limit, offset]);
+            return res.send(result.rows);
+        } else if (offset) {
+            const result = await connection.query(`
+            SELECT * FROM categories ORDER BY name OFFSET $1;`, [offset]);
+            return res.send(result.rows);
+        } else if (limit) {
+            const result = await connection.query(`
+            SELECT * FROM categories ORDER BY name LIMIT $1;`, [limit]);
+            return res.send(result.rows);
+        } else {
+            const allCategories = await connection.query(`SELECT * FROM categories;`);
+            return res.send(allCategories.rows)
+        }
+
+
     } catch (err) {
         console.log("Error adding new Categorie")
         return res.status(422).send({ message: "Error posting new categorie" })

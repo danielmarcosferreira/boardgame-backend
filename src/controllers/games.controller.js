@@ -37,11 +37,26 @@ export async function postGames(req, res) {
 
 export async function getGames(req, res) {
     const { name } = req.query
+    const { offset, limit } = req.query;
 
     try {
         if (name) {
             const gamesWithName = await connection.query(`SELECT * FROM games WHERE name LIKE $1;`, [`${name}%`]);
             return res.send(gamesWithName.rows);
+        }
+
+        if (offset && limit) {
+            const result = await connection.query(`
+            SELECT * FROM games ORDER BY "categoryId" LIMIT $1 OFFSET $2;`, [limit, offset]);
+            return res.send(result.rows);
+        } else if (offset) {
+            const result = await connection.query(`
+            SELECT * FROM games ORDER BY "categoryId" OFFSET $1;`, [offset]);
+            return res.send(result.rows);
+        } else if (limit) {
+            const result = await connection.query(`
+            SELECT * FROM games ORDER BY "categoryId" LIMIT $1;`, [limit]);
+            return res.send(result.rows);
         }
 
         const games = await connection.query(`SELECT * FROM games;`);
