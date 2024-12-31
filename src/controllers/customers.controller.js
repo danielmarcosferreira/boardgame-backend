@@ -23,7 +23,7 @@ export async function postCustomers(req, res) {
 }
 
 export async function getCustomers(req, res) {
-    const { cpf, offset, limit } = req.query;
+    const { cpf, offset, limit, order } = req.query;
     const { id } = req.params;
 
     try {
@@ -37,44 +37,58 @@ export async function getCustomers(req, res) {
             const formattedCustomer = {
                 ...customerById.rows[0],
                 birthday: customerById.rows[0].birthday
-                    ? customerById.rows[0].birthday.toISOString().split('T')[0]
-                    : null, // Handle NULL or undefined birthday
+                    ? customerById.rows[0].birthday.toISOString().split("T")[0]
+                    : null,
             };
 
-            return res.send(formattedCustomer)
+            return res.send(formattedCustomer);
         }
+
+        let query = `SELECT * FROM customers`;
+        const params = [];
+        const conditions = [];
 
         if (cpf) {
-            const customersByCpf = await connection.query(`SELECT * FROM customers WHERE cpf LIKE $1;`, [`${cpf}%`]);
-            return res.send(customersByCpf.rows);
+            conditions.push(`cpf LIKE $${params.length + 1}`);
+            params.push(`${cpf}%`);
         }
 
-        if (offset && limit) {
-            const result = await connection.query(`
-            SELECT * FROM customers ORDER BY name LIMIT $1 OFFSET $2;`, [limit, offset]);
-            return res.send(result.rows);
-        } else if (offset) {
-            const result = await connection.query(`
-            SELECT * FROM customers ORDER BY name OFFSET $1;`, [offset]);
-            return res.send(result.rows);
-        } else if (limit) {
-            const result = await connection.query(`
-            SELECT * FROM customers ORDER BY name LIMIT $1;`, [limit]);
-            return res.send(result.rows);
+        if (order) {
+            const allowedFields = ["name", "cpf", "id"]
+            if (!allowedFields.includes(order)) {
+                return res.status(400).send({ message: "Invalid order field" });
+            }
+            conditions.push(`ORDER BY "${order}"`);
+        } else {
+            conditions.push(`ORDER BY "name"`);
         }
 
-        const customers = await connection.query(`SELECT * FROM customers ORDER BY name;`);
+        if (limit) {
+            conditions.push(`LIMIT $${params.length + 1}`);
+            params.push(limit);
+        }
+        if (offset) {
+            conditions.push(`OFFSET $${params.length + 1}`);
+            params.push(offset);
+        }
+
+        if (conditions.length > 0) {
+            query += ` ${conditions.join(" ")}`;
+        }
+
+        const customers = await connection.query(query, params);
+
         const formattedCustomers = customers.rows.map((customer) => ({
             ...customer,
             birthday: customer.birthday
-                ? customer.birthday.toISOString().split('T')[0]
-                : null, // Handle NULL or undefined birthday
+                ? customer.birthday.toISOString().split("T")[0]
+                : null,
         }));
 
-        return res.send(formattedCustomers)
+        return res.send(formattedCustomers);
     } catch (err) {
-        console.error("Error getting games:", err);
-        return res.status(500).send({ message: "Error getting customers" })
+        console.error("Error getting customers:", err);
+        return res.status(500).send({ message: "Error getting customers" });
     }
 }
 

@@ -36,8 +36,7 @@ export async function postGames(req, res) {
 }
 
 export async function getGames(req, res) {
-    const { name } = req.query
-    const { offset, limit } = req.query;
+    const { name, offset, limit, order } = req.query;
 
     try {
         if (name) {
@@ -45,37 +44,46 @@ export async function getGames(req, res) {
             return res.send(gamesWithName.rows);
         }
 
-        if (offset && limit) {
-            const result = await connection.query(`
-            SELECT * FROM games ORDER BY "categoryId" LIMIT $1 OFFSET $2;`, [limit, offset]);
-            return res.send(result.rows);
-        } else if (offset) {
-            const result = await connection.query(`
-            SELECT * FROM games ORDER BY "categoryId" OFFSET $1;`, [offset]);
-            return res.send(result.rows);
-        } else if (limit) {
-            const result = await connection.query(`
-            SELECT * FROM games ORDER BY "categoryId" LIMIT $1;`, [limit]);
-            return res.send(result.rows);
+        let query = `SELECT * FROM games`;
+        const params = [];
+        const conditions = [];
+
+        if (order) {
+            const allowedFields = ["name", "categoryId", "pricePerDay"];
+            if (!allowedFields.includes(order)) {
+                return res.status(400).send({ message: "Invalid order field" });
+            }
+            conditions.push(`ORDER BY "${order}"`);
+        } else {
+            conditions.push(`ORDER BY "categoryId"`);
         }
 
-        const games = await connection.query(`SELECT * FROM games;`);
+        if (limit) {
+            conditions.push(`LIMIT $${params.length + 1}`);
+            params.push(limit);
+        }
+        if (offset) {
+            conditions.push(`OFFSET $${params.length + 1}`);
+            params.push(offset);
+        }
 
-        const allGames = games.rows.map(game => {
+        query += ` ${conditions.join(" ")}`;
+        const result = await connection.query(query, params);
+
+        const formattedGames = result.rows.map((game) => {
             let categoryName;
 
             if (game.categoryId === 1) {
-                categoryName = 'Estratégia';
-            } else if (game.categoryId === 2){
-                categoryName = 'Investigação';
+                categoryName = "Estratégia";
+            } else if (game.categoryId === 2) {
+                categoryName = "Investigação";
             } else {
-                categoryName = 'Other';
+                categoryName = "Other";
             }
 
-            return {...game, categoryName};
-        })
-
-        return res.send(allGames)
+            return { ...game, categoryName };
+        });
+        return res.send(formattedGames)
     } catch (err) {
         console.error("Error getting games:", err);
         return res.status(500).send({ message: "Error getting games" })

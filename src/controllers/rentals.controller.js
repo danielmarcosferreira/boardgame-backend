@@ -37,39 +37,25 @@ export async function postRental(req, res) {
 }
 
 export async function getRentals(req, res) {
-    const { gameId, customerId, offset, limit } = req.query;
-
-    if (gameId) {
-        const gameExists = await connection.query(`SELECT * FROM games WHERE id = $1;`, [gameId]);
-        if (gameExists.rowCount === 0) {
-            console.log(`Game with ID ${gameId} does not exist`);
-            return res.status(404).send({ message: `Game with ID ${gameId} not found` });
-        }
-    }
-
-    if (customerId) {
-        const customerExists = await connection.query(`SELECT * FROM customers WHERE id = $1;`, [customerId]);
-        if (customerExists.rowCount === 0) {
-            console.log(`Customer with ID ${customerId} does not exist`);
-            return res.status(404).send({ message: `Customer with ID ${customerId} not found` });
-        }
-    }
-
-    if (offset && limit) {
-        const result = await connection.query(`
-            SELECT * FROM rentals ORDER BY "rentDate" LIMIT $1 OFFSET $2;`, [limit, offset]);
-        return res.send(result.rows);
-    } else if (offset) {
-        const result = await connection.query(`
-            SELECT * FROM rentals ORDER BY "rentDate" OFFSET $1;`, [offset]);
-        return res.send(result.rows);
-    } else if (limit) {
-        const result = await connection.query(`
-            SELECT * FROM rentals ORDER BY "rentDate" LIMIT $1;`, [limit]);
-        return res.send(result.rows);
-    }
+    const { gameId, customerId, offset, limit, order } = req.query;
 
     try {
+        if (gameId) {
+            const gameExists = await connection.query(`SELECT * FROM games WHERE id = $1;`, [gameId]);
+            if (gameExists.rowCount === 0) {
+                console.log(`Game with ID ${gameId} does not exist`);
+                return res.status(404).send({ message: `Game with ID ${gameId} not found` });
+            }
+        }
+
+        if (customerId) {
+            const customerExists = await connection.query(`SELECT * FROM customers WHERE id = $1;`, [customerId]);
+            if (customerExists.rowCount === 0) {
+                console.log(`Customer with ID ${customerId} does not exist`);
+                return res.status(404).send({ message: `Customer with ID ${customerId} not found` });
+            }
+        }
+
         let query = `
             SELECT 
                 rentals.*, 
@@ -83,41 +69,68 @@ export async function getRentals(req, res) {
             JOIN games ON rentals."gameId" = games.id`;
 
         const params = [];
+        const conditions = [];
 
         if (gameId) {
-            query += ` WHERE rentals."gameId" = $1`;
-            params.push(gameId)
-        } else if (customerId) {
-            query += ` WHERE rentals."customerId" = $1`
-            params.push(customerId)
+            conditions.push(`rentals."gameId" = $${params.length + 1}`);
+            params.push(gameId);
+        }
+
+        if (customerId) {
+            conditions.push(`rentals."customerId" = $${params.length + 1}`);
+            params.push(customerId);
+        }
+
+        if (conditions.length > 0) {
+            query += ` WHERE ${conditions.join(" AND ")}`;
+        }
+
+        if (order) {
+            const allowedFields = ["rentDate", "daysRented", "originalPrice"];
+            if (!allowedFields.includes(order)) {
+                return res.status(400).send({ message: "Invalid order field" });
+            }
+            query += ` ORDER BY "${order}"`;
+        } else {
+            query += ` ORDER BY "rentDate"`
+        }
+
+        if (limit) {
+            query += ` LIMIT $${params.length + 1}`;
+            params.push(limit);
+        }
+
+        if (offset) {
+            query += ` OFFSET $${params.length + 1}`;
+            params.push(offset);
         }
 
         const rentals = await connection.query(query, params);
 
-        const formattedRentals = rentals.rows.map(rental => ({
+        const formattedRentals = rentals.rows.map((rental) => ({
             id: rental.id,
             customerId: rental.customerId,
             gameId: rental.gameId,
-            rentDate: rental.rentDate.toISOString().split('T')[0], // Format to YYYY-MM-DD
+            rentDate: rental.rentDate.toISOString().split("T")[0], // Format to YYYY-MM-DD
             daysRented: rental.daysRented,
-            returnDate: rental.returnDate ? rental.returnDate.toISOString().split('T')[0] : null, // Handle NULL
+            returnDate: rental.returnDate ? rental.returnDate.toISOString().split("T")[0] : null,
             originalPrice: rental.originalPrice,
             delayFee: rental.delayFee,
             customer: {
                 id: rental.customerId,
-                name: rental.customer_name
+                name: rental.customerName,
             },
             game: {
                 id: rental.gameId,
                 name: rental.gameName,
-                categoryId: rental.categoryId
-            }
+                categoryId: rental.categoryId,
+            },
         }));
 
         return res.send(formattedRentals);
     } catch (err) {
-        console.error("Error getting games:", err);
-        return res.status(500).send({ message: "Error getting games" })
+        console.error("Error getting rentals:", err);
+        return res.status(500).send({ message: "Error getting rentals" });
     }
 }
 
