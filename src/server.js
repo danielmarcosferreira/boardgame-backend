@@ -11,6 +11,7 @@ import rentalsRouter from "./routes/rentals.routes.js"
 const app = e();
 app.use(cors());
 app.use(e.json());
+
 app.use(categoriesRouter)
 app.use(gamesRouter)
 app.use(customersRouter)
