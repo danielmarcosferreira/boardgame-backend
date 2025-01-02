@@ -5,11 +5,11 @@ export async function postGames(req, res) {
 
     try {
         const games = await connection.query(`SELECT * FROM games;`);
-        
+
         if (stockTotal <= 0 || pricePerDay <= 0) {
             console.log("stockTotal and pricePerDay should be higher than 0")
             return res.sendStatus(400)
-        } 
+        }
 
         if (categoryId !== 1 && categoryId !== 2) {
             console.log("categoryId should be 1 or 2")
@@ -27,7 +27,7 @@ export async function postGames(req, res) {
         await connection.query(`
             INSERT INTO games ("name", "image", "stockTotal", "categoryId", "pricePerDay") 
             VALUES ($1, $2, $3, $4, $5);`, [name, image, stockTotal, categoryId, pricePerDay]);
-            
+
         return res.sendStatus(201)
     } catch (err) {
         console.error("Error posting games:", err);
@@ -40,7 +40,8 @@ export async function getGames(req, res) {
 
     try {
         if (name) {
-            const gamesWithName = await connection.query(`SELECT * FROM games WHERE name LIKE $1;`, [`${name}%`]);
+            const gamesWithName = await connection.query(`
+                SELECT * FROM games WHERE name ILIKE $1;`, [`${name}%`]);
             return res.send(gamesWithName.rows);
         }
 
@@ -68,22 +69,13 @@ export async function getGames(req, res) {
         }
 
         query += ` ${conditions.join(" ")}`;
-        const result = await connection.query(query, params);
+        const result = await connection.query(`
+            SELECT games.*, categories.name AS "categoryName" 
+            FROM games 
+            JOIN categories 
+            ON games."categoryId" = categories.id;`);
 
-        const formattedGames = result.rows.map((game) => {
-            let categoryName;
-
-            if (game.categoryId === 1) {
-                categoryName = "Estratégia";
-            } else if (game.categoryId === 2) {
-                categoryName = "Investigação";
-            } else {
-                categoryName = "Other";
-            }
-
-            return { ...game, categoryName };
-        });
-        return res.send(formattedGames)
+        return res.send(result.rows)
     } catch (err) {
         console.error("Error getting games:", err);
         return res.status(500).send({ message: "Error getting games" })

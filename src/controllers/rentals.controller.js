@@ -2,28 +2,18 @@ import connection from "../database/database.js"
 import dayjs from "dayjs"
 
 export async function postRental(req, res) {
-    const { customerId, gameId, daysRented } = req.body;
+    const { customerId,
+        gameId,
+        daysRented,
+        rentDate,
+        originalPrice,
+        returnDate,
+        delayFee } = req.body;
+
+        const rental = req.body;
+    console.log(rental)
 
     try {
-        const userExist = await connection.query('SELECT * FROM customers WHERE id = $1', [customerId])
-        if (userExist.rowCount === 0) {
-            return res.status(400).send({ message: "Customer not found" });
-        }
-
-        const gameExist = await connection.query('SELECT * FROM games WHERE id = $1', [gameId])
-        if (gameExist.rowCount === 0) {
-            return res.status(400).send({ message: "Game not found" });
-        }
-
-        if (daysRented === 0) {
-            return res.status(400).send({ message: "Days rented must be higher than 0" });
-        }
-
-        const gameRented = await connection.query('SELECT * FROM games WHERE id = $1', [gameId]);
-        const originalPrice = gameRented.rows[0].pricePerDay * daysRented;
-        const rentDate = dayjs().format("YYYY-MM-DD");
-        const returnDate = null;
-        const delayFee = null;
         await connection.query(`
             INSERT INTO rentals ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee") 
             VALUES ($1, $2, $3, $4, $5, $6, $7);`,

@@ -4,7 +4,8 @@ export async function postCustomers(req, res) {
     const { name, phone, cpf, birthday } = req.body;
 
     try {
-        const customersExists = await connection.query(`SELECT * FROM customers WHERE cpf = $1;`, [cpf]);
+        const customersExists = await connection.query(`
+            SELECT * FROM customers WHERE cpf = $1;`, [cpf]);
 
         if (customersExists.rows.length > 0) {
             console.log("There is already a customer with that cpf");
@@ -28,7 +29,8 @@ export async function getCustomers(req, res) {
 
     try {
         if (id) {
-            const customerById = await connection.query(`SELECT * FROM customers WHERE id = $1;`, [id]);
+            const customerById = await connection.query(`
+                SELECT * FROM customers WHERE id = $1;`, [id]);
 
             if (customerById.rows.length === 0) {
                 return res.status(404).send({ message: "Customer not found" });
