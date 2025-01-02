@@ -39,10 +39,28 @@ export async function rentalsMiddleware(req, res, next) {
         }
 
         req.body = rental;
-
+        res.locals.game = game
         next()
     } catch (err) {
         console.log(err)
         res.status(500).send(err.message)
     }
+}
+
+export async function gamesAvailableInStock(req, res, next) {
+    const game = res.locals.game;
+
+    try {
+        const rentals = await connection.query(`
+            SELECT * FROM rentals WHERE "gameId" = $1;`, [game.rows[0].id]);
+
+        if (rentals.rows.length > game.rows[0].stockTotal) {
+            return res.sendStatus(400);
+        }
+
+        next()
+    } catch (err) {
+        console.log(err)
+        res.status(500).send(err.message)
+    } 
 }

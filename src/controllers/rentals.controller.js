@@ -10,9 +10,6 @@ export async function postRental(req, res) {
         returnDate,
         delayFee } = req.body;
 
-        const rental = req.body;
-    console.log(rental)
-
     try {
         await connection.query(`
             INSERT INTO rentals ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee") 

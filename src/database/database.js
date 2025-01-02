@@ -5,8 +5,8 @@ env.config()
 const { Pool } = pg;
 
 const connection = new Pool({
-    // connectionString: process.env.DATABASE_URL,
-    // ssl: true,
+    connectionString: process.env.DATABASE_URL,
+    ssl: true,
     user: process.env.USER,
     password: process.env.PASSWORD,
     host: process.env.HOST,
