@@ -39,18 +39,15 @@ export async function getGames(req, res) {
     const { name, offset, limit, order } = req.query;
 
     try {
-        let query = `
-            SELECT games.*, categories.name AS "categoryName" 
-            FROM games 
-            JOIN categories 
-            ON games."categoryId" = categories.id`;
+        if (name) {
+            const gamesWithName = await connection.query(`
+                SELECT * FROM games WHERE name ILIKE $1;`, [`${name}%`]);
+            return res.send(gamesWithName.rows);
+        }
+
+        let query = `SELECT * FROM games`;
         const params = [];
         const conditions = [];
-
-        if (name) {
-            conditions.push(`games.name ILIKE $${params.length + 1}`);
-            params.push(`${name}%`);
-        }
 
         if (order) {
             const allowedFields = ["name", "categoryId", "pricePerDay"];
@@ -64,22 +61,23 @@ export async function getGames(req, res) {
 
         if (limit) {
             conditions.push(`LIMIT $${params.length + 1}`);
-            params.push(Number(limit));
+            params.push(limit);
         }
-
         if (offset) {
             conditions.push(`OFFSET $${params.length + 1}`);
-            params.push(Number(offset));
+            params.push(offset);
         }
 
-        if (conditions.length > 0) {
-            query += ` WHERE ${conditions.join(" AND ")}`;
-        }
+        query += ` ${conditions.join(" ")}`;
+        const result = await connection.query(`
+            SELECT games.*, categories.name AS "categoryName" 
+            FROM games 
+            JOIN categories 
+            ON games."categoryId" = categories.id;`);
 
-        const result = await connection.query(query, params);
-        return res.send(result.rows);
+        return res.send(result.rows)
     } catch (err) {
         console.error("Error getting games:", err);
-        return res.status(500).send({ message: "Error getting games" });
+        return res.status(500).send({ message: "Error getting games" })
     }
 }
